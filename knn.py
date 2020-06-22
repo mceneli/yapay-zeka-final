@@ -1,4 +1,43 @@
 import numpy as np
+import random
+
+def predict(data,k):
+    train_count = int(len(data) * 0.8)
+    test_count = int(len(data) - train_count)
+    
+    train_count=5
+    test_count=5
+    
+    
+    width = len(data[0]) - 1
+    
+    
+    for i in range(test_count):
+        nth = len(data)-1-i
+        print(nth)
+        
+        distances = []
+        for j in range(train_count):   
+            tmp = 0
+            for l in range(1,width+1):
+                tmp = tmp + ( abs(float(data[j][l]) - float(data[nth][l]))**2 )         
+            tmp = tmp**(1/width)
+            
+            distances.append(tmp)
+
+        mins = []
+        for j in range(k):
+            mins.append(distances[j])
+        mins.sort()
+        print(mins)
+        
+        """for j in range(3,train_count):
+            if"""
+            
+            
+        
+ 
+    
 
 
 
@@ -10,38 +49,16 @@ import numpy as np
 
 
 if __name__ == "__main__":
+    k=3
+    file=open('datasets/iris.data', 'r').readlines()
+    N=len(file)
     
-    file=open('datasets/abalone.data', 'r').readlines()
-    N=len(file)-1
-    train_count = int(N * 0.8)
-    test_count = int(N - train_count)
+    data = []
     
-    for i in range(0,train_count):
+    for i in range(0,N):
         line = file[i].split(",")
-        print(line)
+        line[-1] = line[-1].strip()
+        data.append(line)
 
-
-
-    """filepath = "datasets/abalone.data"
-    data = np.loadtxt(filepath)
-
-    train_count = int(data.shape[0] * 0.8)
-    test_count = int(data.shape[0] - train_count)
-
-    print(train_count)
-    print(test_count)
-
-    traindata = np.zeros((train_count, 2))
-    testdata = np.zeros((test_count, 2))
-
-    for i in range(train_count):
-        traindata[i][0]=data[i][0]
-        traindata[i][1]=data[i][1]
-
-    for i in range(train_count,data.shape[0]):
-        testdata[i-train_count][0] = data[i][0]
-        testdata[i-train_count][1] = data[i][1]
-        
-
-    print(traindata,"\n")
-    print(testdata)"""
+    #random.shuffle(data)
+    predict(data,k)
