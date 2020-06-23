@@ -5,20 +5,6 @@ from random import randrange
 from csv import reader
 from math import sqrt
 
-def str_column_to_float(dataset, column):
-	for row in dataset:
-		row[column] = float(row[column].strip())
-
-def str_column_to_int(dataset, column):
-	class_values = [row[column] for row in dataset]
-	unique = set(class_values)
-	lookup = dict()
-	for i, value in enumerate(unique):
-		lookup[value] = i
-	for row in dataset:
-		row[column] = lookup[row[column]]
-	return lookup
-
 def cross_validation_split(dataset, n_folds):
 	dataset_split = list()
 	dataset_copy = list(dataset)
@@ -38,7 +24,7 @@ def accuracy_metric(actual, predicted):
 			correct += 1
 	return correct / float(len(actual)) * 100.0
 
-def evaluate_algorithm(dataset, algorithm, n_folds, *args):
+def evaluate_lvq(dataset, algorithm, n_folds, *args):
 	folds = cross_validation_split(dataset, n_folds)
 	scores = list()
 	for fold in folds:
@@ -61,6 +47,20 @@ def euclidean_distance(row1, row2):
 	for i in range(len(row1)-1):
 		distance += (row1[i] - row2[i])**2
 	return sqrt(distance)
+
+def str_column_to_float(dataset, column):
+	for row in dataset:
+		row[column] = float(row[column].strip())
+
+def str_column_to_int(dataset, column):
+	class_values = [row[column] for row in dataset]
+	unique = set(class_values)
+	lookup = dict()
+	for i, value in enumerate(unique):
+		lookup[value] = i
+	for row in dataset:
+		row[column] = lookup[row[column]]
+	return lookup
 
 def get_best_matching_unit(codebooks, test_row):
 	distances = list()
@@ -94,14 +94,6 @@ def train_codebooks(train, n_codebooks, lrate, epochs):
 					bmu[i] -= rate * error
 	return codebooks
 
-def lvq(train, test, n_codebooks, lrate, epochs):
-	codebooks = train_codebooks(train, n_codebooks, lrate, epochs)
-	predictions = list()
-	for row in test:
-		output = predict(codebooks, row)
-		predictions.append(output)
-	return(predictions)
-    
 def evaluate_knn(data,k):
     train_count = int(len(data) * 0.8)
     test_count = int(len(data) - train_count)
@@ -127,11 +119,18 @@ def evaluate_knn(data,k):
         else:
             scores[1] = scores[1] + 1
     return scores
-            
+
+def lvq(train, test, n_codebooks, lrate, epochs):
+	codebooks = train_codebooks(train, n_codebooks, lrate, epochs)
+	predictions = list()
+	for row in test:
+		output = predict(codebooks, row)
+		predictions.append(output)
+	return(predictions)
+    
 if __name__ == "__main__":
     system('cls')
     k=3
-    
     n_folds = 5
     learn_rate = 0.3
     n_epochs = 50
@@ -145,35 +144,31 @@ if __name__ == "__main__":
         filepath = "datasets/"
         filepath = filepath + datasets[j]
         filepath = filepath + ".data"
-
+        
         file=open(filepath, 'r').readlines()
         N=len(file)
-        
+      
         data = []
-        
         for i in range(0,N):
             line = file[i].split(",")
             line[-1] = line[-1].strip()
             data.append(line)
-
         random.shuffle(data)
-        
+       
         #start KNN algorithm
         scores = evaluate_knn(data,k)
-        print('success rate with KNN = %.2f' %(scores[0]/(scores[0]+scores[1])))
+        print('\tsuccess rate with KNN = %.2f' %(scores[0]/(scores[0]+scores[1])))
     
         #start LVQ algorithm
         for i in range(len(data)):
             tmp = data[i][0]
             data[i][0] = data[i][len(data[0])-1]
             data[i][len(data[0])-1] = tmp
-        
+            
         for i in range(len(data[0])-1):
             str_column_to_float(data, i)
-        # convert class column to integers
+            
         str_column_to_int(data, len(data[0])-1)
+        scores = evaluate_lvq(data, lvq, n_folds, n_codebooks, learn_rate, n_epochs)
+        print('\tsuccess rate with LVQ = %.2f' %(sum(scores)/float(len(scores)*100)),"\n")
         
-        scores = evaluate_algorithm(data, lvq, n_folds, n_codebooks, learn_rate, n_epochs)
-        print('success rate with LVQ = %.2f' %(sum(scores)/float(len(scores)*100)),"\n")
-    
-    
