@@ -1,10 +1,8 @@
 from os import system
 import numpy as np
 import random
-from random import randrange
-from csv import reader
-from math import sqrt
 
+#split dataset into n folds
 def cross_validation_split(dataset, n_folds):
 	dataset_split = list()
 	dataset_copy = list(dataset)
@@ -12,11 +10,12 @@ def cross_validation_split(dataset, n_folds):
 	for i in range(n_folds):
 		fold = list()
 		while len(fold) < fold_size:
-			index = randrange(len(dataset_copy))
+			index = random.randrange(len(dataset_copy))
 			fold.append(dataset_copy.pop(index))
 		dataset_split.append(fold)
 	return dataset_split
 
+#calculates the mean accuracy of predictions
 def accuracy_metric(actual, predicted):
 	correct = 0
 	for i in range(len(actual)):
@@ -24,29 +23,12 @@ def accuracy_metric(actual, predicted):
 			correct += 1
 	return correct / float(len(actual)) * 100.0
 
-def evaluate_lvq(dataset, algorithm, n_folds, *args):
-	folds = cross_validation_split(dataset, n_folds)
-	scores = list()
-	for fold in folds:
-		train_set = list(folds)
-		train_set.remove(fold)
-		train_set = sum(train_set, [])
-		test_set = list()
-		for row in fold:
-			row_copy = list(row)
-			test_set.append(row_copy)
-			row_copy[-1] = None
-		predicted = algorithm(train_set, test_set, *args)
-		actual = [row[-1] for row in fold]
-		accuracy = accuracy_metric(actual, predicted)
-		scores.append(accuracy)
-	return scores
-
+#calculates distance
 def euclidean_distance(row1, row2):
 	distance = 0.0
 	for i in range(len(row1)-1):
 		distance += (row1[i] - row2[i])**2
-	return sqrt(distance)
+	return distance**(1/2)
 
 def str_column_to_float(dataset, column):
 	for row in dataset:
@@ -61,38 +43,39 @@ def str_column_to_int(dataset, column):
 	for row in dataset:
 		row[column] = lookup[row[column]]
 	return lookup
-
-def get_best_matching_unit(codebooks, test_row):
+    
+#finds the best match
+def get_best_match(dataset, test_row):
 	distances = list()
-	for codebook in codebooks:
-		dist = euclidean_distance(codebook, test_row)
-		distances.append((codebook, dist))
+	for data in dataset:
+		dist = euclidean_distance(data, test_row)
+		distances.append((data, dist))
 	distances.sort(key=lambda tup: tup[1])
 	return distances[0][0]
 
-def predict(codebooks, test_row):
-	bmu = get_best_matching_unit(codebooks, test_row)
-	return bmu[-1]
+def predict(dataset, test_row):
+	bm = get_best_match(dataset, test_row)
+	return bm[-1]
 
-def random_codebook(train):
+def random_data(train):
 	n_records = len(train)
 	n_features = len(train[0])
-	codebook = [train[randrange(n_records)][i] for i in range(n_features)]
-	return codebook
+	data = [train[random.randrange(n_records)][i] for i in range(n_features)]
+	return data
 
-def train_codebooks(train, n_codebooks, lrate, epochs):
-	codebooks = [random_codebook(train) for i in range(n_codebooks)]
+def train_dataset(train, n_dataset, lrate, epochs):
+	dataset = [random_data(train) for i in range(n_dataset)]
 	for epoch in range(epochs):
 		rate = lrate * (1.0-(epoch/float(epochs)))
 		for row in train:
-			bmu = get_best_matching_unit(codebooks, row)
+			bm = get_best_match(dataset, row)
 			for i in range(len(row)-1):
-				error = row[i] - bmu[i]
-				if bmu[-1] == row[-1]:
-					bmu[i] += rate * error
+				error = row[i] - bm[i]
+				if bm[-1] == row[-1]:
+					bm[i] += rate * error
 				else:
-					bmu[i] -= rate * error
-	return codebooks
+					bm[i] -= rate * error
+	return dataset
 
 def evaluate_knn(data,k):
     train_count = int(len(data) * 0.8)
@@ -120,13 +103,31 @@ def evaluate_knn(data,k):
             scores[1] = scores[1] + 1
     return scores
 
-def lvq(train, test, n_codebooks, lrate, epochs):
-	codebooks = train_codebooks(train, n_codebooks, lrate, epochs)
+def lvq(train, test, n_dataset, lrate, epochs):
+	dataset = train_dataset(train, n_dataset, lrate, epochs)
 	predictions = list()
 	for row in test:
-		output = predict(codebooks, row)
+		output = predict(dataset, row)
 		predictions.append(output)
 	return(predictions)
+
+def evaluate_lvq(dataset, n_folds, *args):
+	folds = cross_validation_split(dataset, n_folds)
+	scores = list()
+	for fold in folds:
+		train_set = list(folds)
+		train_set.remove(fold)
+		train_set = sum(train_set, [])
+		test_set = list()
+		for row in fold:
+			row_copy = list(row)
+			test_set.append(row_copy)
+			row_copy[-1] = None
+		predicted = lvq(train_set, test_set, *args)
+		actual = [row[-1] for row in fold]
+		accuracy = accuracy_metric(actual, predicted)
+		scores.append(accuracy)
+	return scores
     
 if __name__ == "__main__":
     system('cls')
@@ -134,7 +135,7 @@ if __name__ == "__main__":
     n_folds = 5
     learn_rate = 0.3
     n_epochs = 50
-    n_codebooks = 20
+    n_dataset = 20
     
     datasets = ["balance-scale", "iris", "abalone"]
     dataset_count=len(datasets)
@@ -159,16 +160,16 @@ if __name__ == "__main__":
         scores = evaluate_knn(data,k)
         print('\tsuccess rate with KNN = %.2f' %(scores[0]/(scores[0]+scores[1])))
     
-        #start LVQ algorithm
         for i in range(len(data)):
             tmp = data[i][0]
             data[i][0] = data[i][len(data[0])-1]
             data[i][len(data[0])-1] = tmp
             
         for i in range(len(data[0])-1):
-            str_column_to_float(data, i)
-            
+            str_column_to_float(data, i) 
         str_column_to_int(data, len(data[0])-1)
-        scores = evaluate_lvq(data, lvq, n_folds, n_codebooks, learn_rate, n_epochs)
+        
+        #start LVQ algorithm
+        scores = evaluate_lvq(data, n_folds, n_dataset, learn_rate, n_epochs)
         print('\tsuccess rate with LVQ = %.2f' %(sum(scores)/float(len(scores)*100)),"\n")
         
