@@ -104,30 +104,30 @@ def evaluate_knn(data,k):
     return scores
 
 def lvq(train, test, n_dataset, lrate, epochs):
-	dataset = train_dataset(train, n_dataset, lrate, epochs)
-	predictions = list()
-	for row in test:
-		output = predict(dataset, row)
-		predictions.append(output)
-	return(predictions)
+    dataset = train_dataset(train, n_dataset, lrate, epochs)
+    predictions = list()
+    for row in test:
+        output = predict(dataset, row)
+        predictions.append(output)
+    return(predictions)
 
 def evaluate_lvq(dataset, n_folds, *args):
-	folds = cross_validation_split(dataset, n_folds)
-	scores = list()
-	for fold in folds:
-		train_set = list(folds)
-		train_set.remove(fold)
-		train_set = sum(train_set, [])
-		test_set = list()
-		for row in fold:
-			row_copy = list(row)
-			test_set.append(row_copy)
-			row_copy[-1] = None
-		predicted = lvq(train_set, test_set, *args)
-		actual = [row[-1] for row in fold]
-		accuracy = accuracy_metric(actual, predicted)
-		scores.append(accuracy)
-	return scores
+    folds = cross_validation_split(dataset, n_folds)
+    scores = list()
+    for fold in folds:
+        train_set = list(folds)
+        train_set.remove(fold)
+        train_set = sum(train_set, [])
+        test_set = list()
+        for row in fold:
+            row_copy = list(row)
+            test_set.append(row_copy)
+            row_copy[-1] = None
+        predicted = lvq(train_set, test_set, *args)
+        actual = [row[-1] for row in fold]
+        accuracy = accuracy_metric(actual, predicted)
+        scores.append(accuracy)
+    return scores
     
 if __name__ == "__main__":
     system('cls')
